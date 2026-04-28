@@ -182,8 +182,44 @@ func getIFIndex(nds netdevs.Netdevs) []byte {
 func getAllInventory() map[string]Inventory {
 	m := map[string]Inventory{}
 
-	for _, reg := range []string{"ams", "icn"} {
-		for _, az := range []string{"1", "2", "3"} {
+	log.Println("Collecting APC Inventory")
+	apcNDS := getNetDevs([]string{}, []string{}, "apc")
+	log.Printf("Devices: %d\n", len(apcNDS))
+	apcInv := getInventory(apcNDS)
+	maps.Copy(m, apcInv)
+
+	log.Println("Collecting Sentry Inventory")
+	sentryNDS := getNetDevs([]string{}, []string{}, "sentry")
+	sentryInv := getInventory(sentryNDS)
+	maps.Copy(m, sentryInv)
+
+	log.Println("Collecting Juniper Inventory")
+	junosNDS := getNetDevs([]string{}, []string{}, "junos")
+	junosInv := getInventory(junosNDS)
+	maps.Copy(m, junosInv)
+
+	log.Println("Collecting Dell Inventory")
+	ftosNDS := getNetDevs([]string{}, []string{}, "ftos")
+	ftosInv := getInventory(ftosNDS)
+	maps.Copy(m, ftosInv)
+
+	log.Println("Collecting Cisco Inventory")
+	iosNDS := getNetDevs([]string{}, []string{}, "ios")
+	iosInv := getInventory(iosNDS)
+	maps.Copy(m, iosInv)
+
+	log.Println("Collecting SDX Inventory")
+	sdxNDS := getNetDevs([]string{}, []string{}, "sdx")
+	sdxInv := getInventory(sdxNDS)
+	maps.Copy(m, sdxInv)
+
+	log.Println("Collecting VPX Inventory")
+	vpxNDS := getNetDevs([]string{}, []string{}, "vpx")
+	vpxInv := getInventory(vpxNDS)
+	maps.Copy(m, vpxInv)
+
+	for _, reg := range []string{"iad", "icn", "ams", "sin"} {
+		for _, az := range []string{"1", "2", "3", "4"} {
 			loc := reg + az
 			log.Printf("Collecting EOS Inventory for %s\n", loc)
 			eosNDS := getNetDevs([]string{loc}, []string{}, "eos")
@@ -363,36 +399,48 @@ func saveInventoryToRedis(key string, data []byte) {
 	}
 }
 
-// func getInventoryFromRedis(key string) map[string]Inventory {
-// 	rdb := redis.NewClient(&redis.Options{
-// 		Addr:     "localhost:6379",
-// 		Password: "", // no password set
-// 		DB:       0,  // use default DB
-// 	})
-// 	defer rdb.Close()
+func getInventoryFromRedis(key string) map[string]Inventory {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	defer rdb.Close()
 
-// 	ctx := context.Background()
-// 	val, err := rdb.Get(ctx, "inventory").Result()
-// 	if err != nil {
-// 		log.Fatalf("Error retrieving inventory from redis: %s\n", err)
-// 	}
+	ctx := context.Background()
+	val, err := rdb.Get(ctx, key).Result()
+	if err != nil {
+		log.Fatalf("Error retrieving inventory from redis: %s\n", err)
+	}
 
-// 	retInterface := unmarshal([]byte(val), "inventory")
-// 	ret, ok := retInterface.(map[string]Inventory)
-// 	if !ok {
-// 		log.Fatalf("Error unmarshalling inventory from redis\n")
-// 	}
-// 	return ret
-// }
+	retInterface := unmarshal([]byte(val), "inventory")
+	ret, ok := retInterface.(map[string]Inventory)
+	if !ok {
+		log.Fatalf("Error unmarshalling inventory from redis\n")
+	}
+	return ret
+}
 
+func compareInventory(last, current map[string]Inventory) {
+	for k, _ := range last {
+		if _, ok := current[k]; !ok {
+			log.Printf("%s missing in current inventory\n", k)
+		}
+	}
+	for k, _ := range current {
+		if _, ok := last[k]; !ok {
+			log.Printf("Adding %s to inventory\n", k)
+		}
+	}
+}
 func main() {
 	if allInventory {
-		//lastInventory := GetInventoryFromRedis("inventory")
+		lastInventory := getInventoryFromRedis("inventory")
 		currentInventory := getAllInventory()
 		inventoryBytes := funcrunner.Marshal(currentInventory)
-		saveInventoryToRedis("inventory_test", inventoryBytes)
-		//saveInventoryToRedis("inventory_"+timeString(), inventoryBytes)
-		//compareInventory(lastInventory, currentInventory)
+		saveInventoryToRedis("inventory", inventoryBytes)
+		saveInventoryToRedis("inventory_"+timeString(), inventoryBytes)
+		compareInventory(lastInventory, currentInventory)
 	}
 	if allBackup {
 		fmt.Println("Backing up devices")
