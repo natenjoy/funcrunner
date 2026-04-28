@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/natenjoy/funcrunner/scraper"
+	"github.com/natenjoy/funcrunner/netdevs"
 )
 
 var FTOSCommands = map[string][]string{
@@ -23,7 +23,7 @@ var FTOSCommands = map[string][]string{
 	"ifindex": []string{"show interfaces"},
 }
 
-var FTOSProcess = map[string]func([]*scraper.SSHRequest) []byte{
+var FTOSProcess = map[string]func([]*netdevs.SSHRequest) []byte{
 	"arpinfo": FTOSArpInfo,
 	"backup":  FTOSBackup,
 	"devinfo": FTOSDevInfo,
@@ -32,21 +32,21 @@ var FTOSProcess = map[string]func([]*scraper.SSHRequest) []byte{
 	"getntp":  FTOSGetNTP,
 }
 
-func FTOSIFIndex(srs []*scraper.SSHRequest) []byte {
+func FTOSIFIndex(srs []*netdevs.SSHRequest) []byte {
 	var ifIndex []IFIndex
 	for _, sr := range srs {
-                if sr.Error != nil || len(sr.Responses) != len(FTOSCommands["ifindex"]) {
-                        log.Printf("failed to retrieve the interface indices for %s: %s", sr.Hostname, sr.Error)
-                        continue
-                }
-                for _, block := range strings.Split(sr.Responses[0], "\n\n\n") {
+		if sr.Error != nil || len(sr.Responses) != len(FTOSCommands["ifindex"]) {
+			log.Printf("failed to retrieve the interface indices for %s: %s", sr.Hostname, sr.Error)
+			continue
+		}
+		for _, block := range strings.Split(sr.Responses[0], "\n\n\n") {
 			var i = IFIndex{Hostname: sr.Hostname}
-                        for idx, line := range strings.Split(block, "\n") {
-                                if idx == 0 {
-                                        i.IFName = strings.Join(strings.Fields(line)[:2], "")
-                                        i.IFName = strings.ToLower(i.IFName)
-                                        continue
-                                }
+			for idx, line := range strings.Split(block, "\n") {
+				if idx == 0 {
+					i.IFName = strings.Join(strings.Fields(line)[:2], "")
+					i.IFName = strings.ToLower(i.IFName)
+					continue
+				}
 				if strings.Contains(line, "Interface index is ") {
 					i.IFIndex = strings.Fields(line)[3]
 					break
@@ -60,7 +60,7 @@ func FTOSIFIndex(srs []*scraper.SSHRequest) []byte {
 	return Marshal(ifIndex)
 }
 
-func FTOSArpInfo(srs []*scraper.SSHRequest) []byte {
+func FTOSArpInfo(srs []*netdevs.SSHRequest) []byte {
 	var arpInfo []ArpInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(FTOSCommands["arpinfo"]) {
@@ -104,7 +104,7 @@ func FTOSArpInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(arpInfo)
 }
 
-func FTOSIntInfo(srs []*scraper.SSHRequest) []byte {
+func FTOSIntInfo(srs []*netdevs.SSHRequest) []byte {
 	var intInfo []IntInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(FTOSCommands["intinfo"]) {
@@ -133,9 +133,9 @@ func FTOSIntInfo(srs []*scraper.SSHRequest) []byte {
 						continue
 					}
 					if strings.Contains(i.Name, "vlan") {
-                                                i.Driver = "veth"
-                                                continue
-                                        }
+						i.Driver = "veth"
+						continue
+					}
 					i.Driver = strings.Fields(line)[1]
 					i.Driver = strings.Trim(i.Driver, " ,")
 					if i.Driver != "auto" {
@@ -183,7 +183,7 @@ func FTOSIntInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(intInfo)
 }
 
-func FTOSBackup(srs []*scraper.SSHRequest) []byte {
+func FTOSBackup(srs []*netdevs.SSHRequest) []byte {
 	var backup []Backup
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(FTOSCommands["backup"]) {
@@ -200,7 +200,7 @@ func FTOSBackup(srs []*scraper.SSHRequest) []byte {
 	return Marshal(backup)
 }
 
-func FTOSDevInfo(srs []*scraper.SSHRequest) []byte {
+func FTOSDevInfo(srs []*netdevs.SSHRequest) []byte {
 	var deviceInfo []DevInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(FTOSCommands["devinfo"]) {
@@ -229,7 +229,7 @@ func FTOSDevInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(deviceInfo)
 }
 
-func FTOSGetNTP(srs []*scraper.SSHRequest) []byte {
+func FTOSGetNTP(srs []*netdevs.SSHRequest) []byte {
 	var ntp []NTP
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(FTOSCommands["getntp"]) {

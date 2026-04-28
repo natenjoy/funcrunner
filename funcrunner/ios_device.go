@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/natenjoy/funcrunner/scraper"
+	"github.com/natenjoy/funcrunner/netdevs"
 )
 
 var IOSCommands = map[string][]string{
@@ -18,7 +18,7 @@ var IOSCommands = map[string][]string{
 	"ifindex": []string{"show snmp mib ifmib ifindex"},
 }
 
-var IOSProcess = map[string]func([]*scraper.SSHRequest) []byte{
+var IOSProcess = map[string]func([]*netdevs.SSHRequest) []byte{
 	"arpinfo": IOSArpInfo,
 	"backup":  IOSBackup,
 	"devinfo": IOSDevInfo,
@@ -27,7 +27,7 @@ var IOSProcess = map[string]func([]*scraper.SSHRequest) []byte{
 	"ifindex": IOSIFIndex,
 }
 
-func IOSIFIndex(srs []*scraper.SSHRequest) []byte {
+func IOSIFIndex(srs []*netdevs.SSHRequest) []byte {
 	var ifIndex []IFIndex
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(IOSCommands["ifindex"]) {
@@ -52,7 +52,7 @@ func IOSIFIndex(srs []*scraper.SSHRequest) []byte {
 	return Marshal(ifIndex)
 }
 
-func IOSArpInfo(srs []*scraper.SSHRequest) []byte {
+func IOSArpInfo(srs []*netdevs.SSHRequest) []byte {
 	var arpInfo []ArpInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(IOSCommands["arpinfo"]) {
@@ -75,7 +75,7 @@ func IOSArpInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(arpInfo)
 }
 
-func IOSIntInfo(srs []*scraper.SSHRequest) []byte {
+func IOSIntInfo(srs []*netdevs.SSHRequest) []byte {
 	var intInfo []IntInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(IOSCommands["intinfo"]) {
@@ -131,7 +131,7 @@ func IOSIntInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(intInfo)
 }
 
-func IOSBackup(srs []*scraper.SSHRequest) []byte {
+func IOSBackup(srs []*netdevs.SSHRequest) []byte {
 	var backup []Backup
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(IOSCommands["backup"]) {
@@ -148,7 +148,7 @@ func IOSBackup(srs []*scraper.SSHRequest) []byte {
 	return Marshal(backup)
 }
 
-func IOSDevInfo(srs []*scraper.SSHRequest) []byte {
+func IOSDevInfo(srs []*netdevs.SSHRequest) []byte {
 	var deviceInfo []DevInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(IOSCommands["devinfo"]) {
@@ -178,7 +178,7 @@ func IOSDevInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(deviceInfo)
 }
 
-func IOSGetNTP(srs []*scraper.SSHRequest) []byte {
+func IOSGetNTP(srs []*netdevs.SSHRequest) []byte {
 	var ntp []NTP
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(IOSCommands["getntp"]) {

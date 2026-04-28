@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/natenjoy/funcrunner/netdevs"
-	"github.com/natenjoy/funcrunner/scraper"
 )
 
 // Functions supported by devices
@@ -60,7 +59,7 @@ func GetCommands(opsys, fn string) []string {
 }
 
 // GetProcessor returns the function associated with the device type
-func GetProcessor(opsys, fn string) (func([]*scraper.SSHRequest) []byte, error) {
+func GetProcessor(opsys, fn string) (func([]*netdevs.SSHRequest) []byte, error) {
 	switch opsys {
 	case "sdx":
 		return SDXProcess[fn], nil
@@ -113,7 +112,7 @@ func FuncRun(nds netdevs.Netdevs, fn string) ([]byte, error) {
 	}
 
 	// Runs the commands on the netdevs and gets slice of ssh requests fulfilled
-	requests := scraper.BulkSSHRequest(nds, commands)
+	requests := netdevs.BulkSSHRequest(nds, commands)
 
 	bs := processor(requests)
 

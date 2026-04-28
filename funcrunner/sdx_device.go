@@ -4,7 +4,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/natenjoy/funcrunner/scraper"
+	"github.com/natenjoy/funcrunner/netdevs"
 )
 
 var SDXCommands = map[string][]string{
@@ -14,14 +14,14 @@ var SDXCommands = map[string][]string{
 	"ifindex": []string{"exit"},
 }
 
-var SDXProcess = map[string]func([]*scraper.SSHRequest) []byte{
+var SDXProcess = map[string]func([]*netdevs.SSHRequest) []byte{
 	"arpinfo": SDXArpInfo,
 	"devinfo": SDXDevInfo,
 	"intinfo": SDXIntInfo,
 	"ifindex": SDXIFIndex,
 }
 
-func SDXIntInfo(srs []*scraper.SSHRequest) []byte {
+func SDXIntInfo(srs []*netdevs.SSHRequest) []byte {
 	var intInfo []IntInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(SDXCommands["intinfo"]) {
@@ -53,7 +53,7 @@ func SDXIntInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(intInfo)
 }
 
-func SDXDevInfo(srs []*scraper.SSHRequest) []byte {
+func SDXDevInfo(srs []*netdevs.SSHRequest) []byte {
 	var deviceInfo []DevInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(SDXCommands["devinfo"]) {
@@ -82,12 +82,12 @@ func SDXDevInfo(srs []*scraper.SSHRequest) []byte {
 }
 
 // Not applicable
-func SDXArpInfo(srs []*scraper.SSHRequest) []byte {
+func SDXArpInfo(srs []*netdevs.SSHRequest) []byte {
 	var arpInfo = []ArpInfo{}
 	return Marshal(arpInfo)
 }
 
-func SDXIFIndex(srs []*scraper.SSHRequest) []byte {
-        var ifindex = []IFIndex{}
-        return Marshal(ifindex)
+func SDXIFIndex(srs []*netdevs.SSHRequest) []byte {
+	var ifindex = []IFIndex{}
+	return Marshal(ifindex)
 }

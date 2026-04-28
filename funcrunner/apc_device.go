@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/natenjoy/funcrunner/scraper"
+	"github.com/natenjoy/funcrunner/netdevs"
 )
 
 var APCCommands = map[string][]string{
@@ -17,7 +17,7 @@ var APCCommands = map[string][]string{
 	"ifindex": []string{"exit"},
 }
 
-var APCProcess = map[string]func([]*scraper.SSHRequest) []byte{
+var APCProcess = map[string]func([]*netdevs.SSHRequest) []byte{
 	"arpinfo": APCArpInfo,
 	"devinfo": APCDevInfo,
 	"intinfo": APCIntInfo,
@@ -26,7 +26,7 @@ var APCProcess = map[string]func([]*scraper.SSHRequest) []byte{
 	"ifindex": APCIFIndex,
 }
 
-func APCIntInfo(srs []*scraper.SSHRequest) []byte {
+func APCIntInfo(srs []*netdevs.SSHRequest) []byte {
 	var intInfo []IntInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(APCCommands["intinfo"]) {
@@ -57,7 +57,7 @@ func APCIntInfo(srs []*scraper.SSHRequest) []byte {
 
 }
 
-func APCGetNTP(srs []*scraper.SSHRequest) []byte {
+func APCGetNTP(srs []*netdevs.SSHRequest) []byte {
 	var ntp []NTP
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(APCCommands["getntp"]) {
@@ -78,7 +78,7 @@ func APCGetNTP(srs []*scraper.SSHRequest) []byte {
 	return Marshal(ntp)
 }
 
-func APCDevInfo(srs []*scraper.SSHRequest) []byte {
+func APCDevInfo(srs []*netdevs.SSHRequest) []byte {
 	var deviceInfo []DevInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(APCCommands["devinfo"]) {
@@ -111,7 +111,7 @@ func APCDevInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(deviceInfo)
 }
 
-func APCGetSNMP(srs []*scraper.SSHRequest) []byte {
+func APCGetSNMP(srs []*netdevs.SSHRequest) []byte {
 	var snmp []SNMP
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(APCCommands["getsnmp"]) {
@@ -130,13 +130,12 @@ func APCGetSNMP(srs []*scraper.SSHRequest) []byte {
 }
 
 // Not applicable
-func APCArpInfo(srs []*scraper.SSHRequest) []byte {
+func APCArpInfo(srs []*netdevs.SSHRequest) []byte {
 	var arpInfo = []ArpInfo{}
 	return Marshal(arpInfo)
 }
 
-func APCIFIndex(srs []*scraper.SSHRequest) []byte {
-        var ifindex = []IFIndex{}
-        return Marshal(ifindex)
+func APCIFIndex(srs []*netdevs.SSHRequest) []byte {
+	var ifindex = []IFIndex{}
+	return Marshal(ifindex)
 }
-

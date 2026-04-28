@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/natenjoy/funcrunner/scraper"
+	"github.com/natenjoy/funcrunner/netdevs"
 )
 
 var JUNOSCommands = map[string][]string{
@@ -20,7 +20,7 @@ var JUNOSCommands = map[string][]string{
 	"ifindex": []string{"show interfaces"},
 }
 
-var JUNOSProcess = map[string]func([]*scraper.SSHRequest) []byte{
+var JUNOSProcess = map[string]func([]*netdevs.SSHRequest) []byte{
 	"arpinfo": JUNOSArpInfo,
 	"backup":  JUNOSBackup,
 	"devinfo": JUNOSDevInfo,
@@ -29,7 +29,7 @@ var JUNOSProcess = map[string]func([]*scraper.SSHRequest) []byte{
 	"ifindex": JUNOSIFIndex,
 }
 
-func JUNOSIFIndex(srs []*scraper.SSHRequest) []byte {
+func JUNOSIFIndex(srs []*netdevs.SSHRequest) []byte {
 	var ifIndex []IFIndex
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(JUNOSCommands["ifindex"]) {
@@ -60,7 +60,7 @@ func JUNOSIFIndex(srs []*scraper.SSHRequest) []byte {
 	return Marshal(ifIndex)
 }
 
-func JUNOSArpInfo(srs []*scraper.SSHRequest) []byte {
+func JUNOSArpInfo(srs []*netdevs.SSHRequest) []byte {
 	var arpInfo []ArpInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(JUNOSCommands["arpinfo"]) {
@@ -123,10 +123,7 @@ func GetOpticsMap(hostnaem, chassis string) map[string]Optic {
 
 */
 
-
-
-
-func JUNOSIntInfo(srs []*scraper.SSHRequest) []byte {
+func JUNOSIntInfo(srs []*netdevs.SSHRequest) []byte {
 	var intInfo []IntInfo
 	for _, sr := range srs {
 		// opticsMap := GetOpticsMap(sr.hostname, sr.Responses[1])
@@ -191,7 +188,7 @@ func JUNOSIntInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(intInfo)
 }
 
-func JUNOSBackup(srs []*scraper.SSHRequest) []byte {
+func JUNOSBackup(srs []*netdevs.SSHRequest) []byte {
 	var backup []Backup
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(JUNOSCommands["backup"]) {
@@ -208,7 +205,7 @@ func JUNOSBackup(srs []*scraper.SSHRequest) []byte {
 	return Marshal(backup)
 }
 
-func JUNOSDevInfo(srs []*scraper.SSHRequest) []byte {
+func JUNOSDevInfo(srs []*netdevs.SSHRequest) []byte {
 	var deviceInfo []DevInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(JUNOSCommands["devinfo"]) {
@@ -255,7 +252,7 @@ func JUNOSDevInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(deviceInfo)
 }
 
-func JUNOSGetNTP(srs []*scraper.SSHRequest) []byte {
+func JUNOSGetNTP(srs []*netdevs.SSHRequest) []byte {
 	var ntp []NTP
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(JUNOSCommands["getntp"]) {

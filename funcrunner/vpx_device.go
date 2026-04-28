@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/natenjoy/funcrunner/scraper"
+	"github.com/natenjoy/funcrunner/netdevs"
 )
 
 var BackupDirectory = "/opt/local/netdevops/backups"
@@ -18,7 +18,7 @@ var VPXCommands = map[string][]string{
 	"ifindex": []string{"exit"},
 }
 
-var VPXProcess = map[string]func([]*scraper.SSHRequest) []byte{
+var VPXProcess = map[string]func([]*netdevs.SSHRequest) []byte{
 	"arpinfo": VPXArpInfo,
 	"backup":  VPXBackup,
 	"devinfo": VPXDevInfo,
@@ -26,7 +26,7 @@ var VPXProcess = map[string]func([]*scraper.SSHRequest) []byte{
 	"ifindex": VPXIFIndex,
 }
 
-func VPXIntInfo(srs []*scraper.SSHRequest) []byte {
+func VPXIntInfo(srs []*netdevs.SSHRequest) []byte {
 	var intInfo []IntInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(VPXCommands["intinfo"]) {
@@ -35,7 +35,7 @@ func VPXIntInfo(srs []*scraper.SSHRequest) []byte {
 		}
 		var i = IntInfo{Hostname: sr.Hostname, IPInfo: make([]IPInfo, 0)}
 		for _, line := range strings.Split(sr.Responses[0], "\n") {
-			if strings.Contains(line, "Enabled") { 
+			if strings.Contains(line, "Enabled") {
 				fields := strings.Fields(line)
 				var ip = IPInfo{Arp: make(map[string]string, 0)}
 				ip.Address = fields[1]
@@ -53,7 +53,7 @@ func VPXIntInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(intInfo)
 }
 
-func VPXBackup(srs []*scraper.SSHRequest) []byte {
+func VPXBackup(srs []*netdevs.SSHRequest) []byte {
 	var backup []Backup
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(VPXCommands["backup"]) {
@@ -72,7 +72,7 @@ func VPXBackup(srs []*scraper.SSHRequest) []byte {
 	return Marshal(backup)
 }
 
-func VPXDevInfo(srs []*scraper.SSHRequest) []byte {
+func VPXDevInfo(srs []*netdevs.SSHRequest) []byte {
 	var deviceInfo []DevInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(VPXCommands["devinfo"]) {
@@ -115,12 +115,12 @@ func VPXDevInfo(srs []*scraper.SSHRequest) []byte {
 }
 
 // Not applicable
-func VPXArpInfo(srs []*scraper.SSHRequest) []byte {
+func VPXArpInfo(srs []*netdevs.SSHRequest) []byte {
 	var arpInfo = []ArpInfo{}
 	return Marshal(arpInfo)
 }
 
-func VPXIFIndex(srs []*scraper.SSHRequest) []byte {
-        var ifindex = []IFIndex{}
-        return Marshal(ifindex)
+func VPXIFIndex(srs []*netdevs.SSHRequest) []byte {
+	var ifindex = []IFIndex{}
+	return Marshal(ifindex)
 }

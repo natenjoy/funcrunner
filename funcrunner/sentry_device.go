@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/natenjoy/funcrunner/scraper"
+	"github.com/natenjoy/funcrunner/netdevs"
 )
 
 var SENTRYCommands = map[string][]string{
@@ -16,7 +16,7 @@ var SENTRYCommands = map[string][]string{
 	"ifindex": []string{"exit"},
 }
 
-var SENTRYProcess = map[string]func([]*scraper.SSHRequest) []byte{
+var SENTRYProcess = map[string]func([]*netdevs.SSHRequest) []byte{
 	"arpinfo": SENTRYArpInfo,
 	"getntp":  SENTRYGetNTP,
 	"devinfo": SENTRYDevInfo,
@@ -24,7 +24,7 @@ var SENTRYProcess = map[string]func([]*scraper.SSHRequest) []byte{
 	"ifindex": SENTRYIFIndex,
 }
 
-func SENTRYIntInfo(srs []*scraper.SSHRequest) []byte {
+func SENTRYIntInfo(srs []*netdevs.SSHRequest) []byte {
 	var intInfo []IntInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(SENTRYCommands["intinfo"]) {
@@ -51,7 +51,7 @@ func SENTRYIntInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(intInfo)
 }
 
-func SENTRYGetNTP(srs []*scraper.SSHRequest) []byte {
+func SENTRYGetNTP(srs []*netdevs.SSHRequest) []byte {
 	var ntp []NTP
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(SENTRYCommands["getntp"]) {
@@ -69,7 +69,7 @@ func SENTRYGetNTP(srs []*scraper.SSHRequest) []byte {
 	return Marshal(ntp)
 }
 
-func SENTRYDevInfo(srs []*scraper.SSHRequest) []byte {
+func SENTRYDevInfo(srs []*netdevs.SSHRequest) []byte {
 	var deviceInfo []DevInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(SENTRYCommands["devinfo"]) {
@@ -102,12 +102,12 @@ func SENTRYDevInfo(srs []*scraper.SSHRequest) []byte {
 }
 
 // Not applicable
-func SENTRYArpInfo(srs []*scraper.SSHRequest) []byte {
+func SENTRYArpInfo(srs []*netdevs.SSHRequest) []byte {
 	var arpInfo = []ArpInfo{}
 	return Marshal(arpInfo)
 }
 
-func SENTRYIFIndex(srs []*scraper.SSHRequest) []byte {
-        var ifindex = []IFIndex{}
-        return Marshal(ifindex)
+func SENTRYIFIndex(srs []*netdevs.SSHRequest) []byte {
+	var ifindex = []IFIndex{}
+	return Marshal(ifindex)
 }

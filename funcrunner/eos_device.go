@@ -6,19 +6,19 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/natenjoy/funcrunner/scraper"
+	"github.com/natenjoy/funcrunner/netdevs"
 )
 
 var EOSCommands = map[string][]string{
 	"arpinfo": []string{"show arp vrf all"},
 	"backup":  []string{"show startup-config"},
 	"devinfo": []string{"show version"},
-	"intinfo": []string{"show interfaces","show inventory | grep -E 'Arista.Networks| FS '", "show interfaces transceiver properties | grep -E '^Name|^Media'"},
+	"intinfo": []string{"show interfaces", "show inventory | grep -E 'Arista.Networks| FS '", "show interfaces transceiver properties | grep -E '^Name|^Media'"},
 	"getntp":  []string{"show running | grep ntp.server"},
 	"ifindex": []string{"show snmp mib ifmib ifindex"},
 }
 
-var EOSProcess = map[string]func([]*scraper.SSHRequest) []byte{
+var EOSProcess = map[string]func([]*netdevs.SSHRequest) []byte{
 	"arpinfo": EOSArpInfo,
 	"backup":  EOSBackup,
 	"devinfo": EOSDevInfo,
@@ -68,14 +68,14 @@ func GetOpticsMap(inv, tcvr string) map[string]Optic {
 		optic := Optic{
 			Manufacturer: val[2],
 			SerialNumber: val[1],
-			ModelType: val[0],
-			MediaType: media}
-		opsMap["ethernet" + intf] = optic
+			ModelType:    val[0],
+			MediaType:    media}
+		opsMap["ethernet"+intf] = optic
 	}
 	return opsMap
 }
 
-func EOSIFIndex(srs []*scraper.SSHRequest) []byte {
+func EOSIFIndex(srs []*netdevs.SSHRequest) []byte {
 	var ifIndex []IFIndex
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(EOSCommands["ifindex"]) {
@@ -95,7 +95,7 @@ func EOSIFIndex(srs []*scraper.SSHRequest) []byte {
 	return Marshal(ifIndex)
 }
 
-func EOSArpInfo(srs []*scraper.SSHRequest) []byte {
+func EOSArpInfo(srs []*netdevs.SSHRequest) []byte {
 	var arpInfo []ArpInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(EOSCommands["arpinfo"]) {
@@ -125,7 +125,7 @@ func EOSArpInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(arpInfo)
 }
 
-func EOSIntInfo(srs []*scraper.SSHRequest) []byte {
+func EOSIntInfo(srs []*netdevs.SSHRequest) []byte {
 	var intInfo []IntInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(EOSCommands["intinfo"]) {
@@ -135,7 +135,7 @@ func EOSIntInfo(srs []*scraper.SSHRequest) []byte {
 		opticsMap := GetOpticsMap(sr.Responses[1], sr.Responses[2])
 		var i = IntInfo{Hostname: sr.Hostname, Driver: "veth", IPInfo: make([]IPInfo, 0)}
 		// Added \nend to response to ensure last interface appends
-		for _, line := range strings.Split(sr.Responses[0] + "\nend", "\n") {
+		for _, line := range strings.Split(sr.Responses[0]+"\nend", "\n") {
 			if len(line) == 0 {
 				continue
 			}
@@ -146,7 +146,7 @@ func EOSIntInfo(srs []*scraper.SSHRequest) []byte {
 				i = IntInfo{Hostname: sr.Hostname, Driver: "veth", IPInfo: make([]IPInfo, 0)} // reset struct to defaults
 				i.Name = strings.Fields(line)[0]
 				i.Name = strings.ToLower(i.Name)
-			
+
 				if strings.Contains(i.Name, ".") {
 					continue
 				}
@@ -207,7 +207,7 @@ func EOSIntInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(intInfo)
 }
 
-func EOSBackup(srs []*scraper.SSHRequest) []byte {
+func EOSBackup(srs []*netdevs.SSHRequest) []byte {
 	var backup []Backup
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(EOSCommands["backup"]) {
@@ -224,7 +224,7 @@ func EOSBackup(srs []*scraper.SSHRequest) []byte {
 	return Marshal(backup)
 }
 
-func EOSDevInfo(srs []*scraper.SSHRequest) []byte {
+func EOSDevInfo(srs []*netdevs.SSHRequest) []byte {
 	var deviceInfo []DevInfo
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(EOSCommands["devinfo"]) {
@@ -253,7 +253,7 @@ func EOSDevInfo(srs []*scraper.SSHRequest) []byte {
 	return Marshal(deviceInfo)
 }
 
-func EOSGetNTP(srs []*scraper.SSHRequest) []byte {
+func EOSGetNTP(srs []*netdevs.SSHRequest) []byte {
 	var ntp []NTP
 	for _, sr := range srs {
 		if sr.Error != nil || len(sr.Responses) != len(EOSCommands["getntp"]) {
