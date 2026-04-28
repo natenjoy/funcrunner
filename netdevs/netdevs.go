@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -46,7 +45,6 @@ func (nds Netdevs) SortByHost() {
 	sort.Slice(nds, func(i, j int) bool {
 		return nds[i].Hostname < nds[j].Hostname
 	})
-	return
 }
 
 // Include returns Netdevs including all matches in either Operating System or Hostname
@@ -119,10 +117,6 @@ func (nds Netdevs) Dedupe() Netdevs {
 	return deduped
 }
 
-func (nds Netdevs) Compare(onds Netdevs) {
-	return
-}
-
 // HostnameFromIP returns the hostname for a netdev with ip, else ""
 func (nds Netdevs) HostnameFromIP(ipaddr string) string {
 	for _, nd := range nds {
@@ -168,7 +162,7 @@ func NetdevsToHostHash(nds Netdevs) map[string]Netdev {
 }
 
 func NetdevsFromJsonFile(filename string) (Netdevs, error) {
-	bs, err := ioutil.ReadFile(filename)
+	bs, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failure reading from file: %s", err)
 	}
@@ -189,7 +183,7 @@ func NetdevsToJsonFile(nds Netdevs, filename string) error {
 		return fmt.Errorf("failure marshalling data: %s", err)
 	}
 
-	err = ioutil.WriteFile(filename, bs, 0666)
+	err = os.WriteFile(filename, bs, 0666)
 	if err != nil {
 		return fmt.Errorf("failure writing file: %s", err)
 	}
@@ -198,7 +192,7 @@ func NetdevsToJsonFile(nds Netdevs, filename string) error {
 }
 
 func NetdevsFromYamlFile(filename string) (Netdevs, error) {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failure opening yaml file: %s", err)
 	}
@@ -220,7 +214,7 @@ func NetdevsToYamlFile(nds Netdevs, filename string) error {
 		return fmt.Errorf("failure marshalling data: %s", err)
 	}
 
-	err = ioutil.WriteFile(filename, bs, 0666)
+	err = os.WriteFile(filename, bs, 0666)
 	if err != nil {
 		return fmt.Errorf("failure writing file: %s", err)
 	}
