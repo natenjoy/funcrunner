@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"maps"
 	"os"
 	"strings"
 	"time"
@@ -17,7 +17,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func Unmarshal(bs []byte, stype string) any {
+func unmarshal(bs []byte, stype string) any {
 	switch stype {
 	case "devinfo":
 		var dev []funcrunner.DevInfo
@@ -72,7 +72,7 @@ type Inventory struct {
 	IntInfo map[string]funcrunner.IntInfo `json:"intinfo"`
 }
 
-func GetInventoryJson(devs []funcrunner.DevInfo, intfs []funcrunner.IntInfo, arps []funcrunner.ArpInfo, indices []funcrunner.IFIndex) map[string]Inventory {
+func getInventoryJson(devs []funcrunner.DevInfo, intfs []funcrunner.IntInfo, arps []funcrunner.ArpInfo, indices []funcrunner.IFIndex) map[string]Inventory {
 	m := map[string]Inventory{}
 	for _, dev := range devs {
 		ii := map[string]funcrunner.IntInfo{}
@@ -115,7 +115,7 @@ func GetInventoryJson(devs []funcrunner.DevInfo, intfs []funcrunner.IntInfo, arp
 	return m
 }
 
-func GetInventory(nds netdevs.Netdevs) map[string]Inventory {
+func getInventory(nds netdevs.Netdevs) map[string]Inventory {
 	// Get the raw data from funcrunner
 	dev, err := funcrunner.FuncRun(nds, "devinfo")
 	if err != nil {
@@ -138,10 +138,10 @@ func GetInventory(nds netdevs.Netdevs) map[string]Inventory {
 	}
 
 	// Unmarshal the data
-	arps := Unmarshal(arp, "arpinfo")
-	devs := Unmarshal(dev, "devinfo")
-	intfs := Unmarshal(intf, "intinfo")
-	indices := Unmarshal(index, "ifindex")
+	arps := unmarshal(arp, "arpinfo")
+	devs := unmarshal(dev, "devinfo")
+	intfs := unmarshal(intf, "intinfo")
+	indices := unmarshal(index, "ifindex")
 
 	// Assert the data
 	d, ok := devs.([]funcrunner.DevInfo)
@@ -161,17 +161,17 @@ func GetInventory(nds netdevs.Netdevs) map[string]Inventory {
 		log.Fatalf("IFIndex failed assertion\n")
 	}
 
-	inv := GetInventoryJson(d, i, a, idx)
+	inv := getInventoryJson(d, i, a, idx)
 	return inv
 }
 
-func GetIFIndex(nds netdevs.Netdevs) []byte {
+func getIFIndex(nds netdevs.Netdevs) []byte {
 	indices, err := funcrunner.FuncRun(nds, "ifindex")
 	if err != nil {
 		log.Fatalf("FuncRun error: %s\n", err)
 	}
 
-	ifIndices := Unmarshal(indices, "ifindex")
+	ifIndices := unmarshal(indices, "ifindex")
 	_, ok := ifIndices.([]funcrunner.IFIndex)
 	if !ok {
 		log.Fatalf("ArpInfo failed assertion\n")
@@ -179,37 +179,30 @@ func GetIFIndex(nds netdevs.Netdevs) []byte {
 	return indices
 }
 
-func MergeInventory(allNDS, newNDS map[string]Inventory) {
-	for k, v := range newNDS {
-		allNDS[k] = v
-	}
-	return
-}
-
-func GetAllInventory() map[string]Inventory {
+func getAllInventory() map[string]Inventory {
 	m := map[string]Inventory{}
 
 	for _, reg := range []string{"ams", "icn"} {
 		for _, az := range []string{"1", "2", "3"} {
 			loc := reg + az
 			log.Printf("Collecting EOS Inventory for %s\n", loc)
-			eosNDS := GetNetDevs([]string{loc}, []string{}, "eos")
-			eosInv := GetInventory(eosNDS)
-			MergeInventory(m, eosInv)
+			eosNDS := getNetDevs([]string{loc}, []string{}, "eos")
+			eosInv := getInventory(eosNDS)
+			maps.Copy(m, eosInv)
 		}
 	}
 
 	return m
 }
 
-func GetHash(s string) string {
+func getHash(s string) string {
 	hash := sha256.New()
 	hash.Write([]byte(s))
 	bs := hash.Sum(nil)
 	return fmt.Sprintf("%x", bs)
 }
 
-func UpdateBackup(b funcrunner.Backup) {
+func updateBackup(b funcrunner.Backup) {
 	fname := ""
 	if b.DeviceType == "vpx" {
 		fname = backupDirectory + "vpxs/" + b.Hostname
@@ -217,106 +210,106 @@ func UpdateBackup(b funcrunner.Backup) {
 		fname = backupDirectory + string(b.Hostname[:4]) + "/" + b.Hostname
 	}
 	hash := ""
-	bs, err := ioutil.ReadFile(fname)
+	bs, err := os.ReadFile(fname)
 	if err != nil {
 		log.Printf("First time backup for %s\n", fname)
 	} else {
-		hash = GetHash(string(bs))
+		hash = getHash(string(bs))
 	}
 	if hash != b.Hash {
 		fmt.Printf("Configuration for %s has changed.  Overwriting backup\n", b.Hostname)
-		err = ioutil.WriteFile(fname, []byte(b.Data), os.FileMode(int(0777)))
+		err = os.WriteFile(fname, []byte(b.Data), os.FileMode(int(0777)))
 		if err != nil {
 			log.Printf("Error writing backup file: %s\n", err)
 		}
 	}
 }
 
-func BackupAll() {
+func backupAll() {
 	// FTOS
 	fmt.Println("Backing up all FTOS devices")
-	ftosNDS := GetNetDevs([]string{}, []string{}, "ftos")
+	ftosNDS := getNetDevs([]string{}, []string{}, "ftos")
 	backups, err := funcrunner.FuncRun(ftosNDS, "backup")
 	if err != nil {
 		log.Fatalf("FuncRun Backup error: %s\n", err)
 	}
-	backupSlice := Unmarshal(backups, "backup")
+	backupSlice := unmarshal(backups, "backup")
 	bkups, ok := backupSlice.([]funcrunner.Backup)
 	if !ok {
 		log.Fatalf("Backup failed assertion\n")
 	}
 	for _, b := range bkups {
-		UpdateBackup(b)
+		updateBackup(b)
 	}
 
 	// IOS
 	fmt.Println("Backing up all IOS devices")
-	iosNDS := GetNetDevs([]string{}, []string{}, "ios")
+	iosNDS := getNetDevs([]string{}, []string{}, "ios")
 	backups, err = funcrunner.FuncRun(iosNDS, "backup")
 	if err != nil {
 		log.Fatalf("FuncRun Backup error: %s\n", err)
 	}
-	backupSlice = Unmarshal(backups, "backup")
+	backupSlice = unmarshal(backups, "backup")
 	bkups, ok = backupSlice.([]funcrunner.Backup)
 	if !ok {
 		log.Fatalf("Backup failed assertion\n")
 	}
 	for _, b := range bkups {
-		UpdateBackup(b)
+		updateBackup(b)
 	}
 
 	// JUNOS
 	fmt.Println("Backing up all JUNOS devices")
-	junosNDS := GetNetDevs([]string{}, []string{}, "junos")
+	junosNDS := getNetDevs([]string{}, []string{}, "junos")
 	backups, err = funcrunner.FuncRun(junosNDS, "backup")
 	if err != nil {
 		log.Fatalf("FuncRun Backup error: %s\n", err)
 	}
-	backupSlice = Unmarshal(backups, "backup")
+	backupSlice = unmarshal(backups, "backup")
 	bkups, ok = backupSlice.([]funcrunner.Backup)
 	if !ok {
 		log.Fatalf("Backup failed assertion\n")
 	}
 	for _, b := range bkups {
-		UpdateBackup(b)
+		updateBackup(b)
 	}
 
 	// VPXs
 	fmt.Println("Backing up all VPX devices")
-	vpxNDS := GetNetDevs([]string{}, []string{}, "vpx")
+	vpxNDS := getNetDevs([]string{}, []string{}, "vpx")
 	backups, err = funcrunner.FuncRun(vpxNDS, "backup")
 	if err != nil {
 		log.Fatalf("FuncRun Backup error: %s\n", err)
 	}
-	backupSlice = Unmarshal(backups, "backup")
+	backupSlice = unmarshal(backups, "backup")
 	bkups, ok = backupSlice.([]funcrunner.Backup)
 	if !ok {
 		log.Fatalf("Backup failed assertion\n")
 	}
 	for _, b := range bkups {
-		UpdateBackup(b)
+		updateBackup(b)
 	}
 
 	// EOS
 	for _, reg := range []string{"ams", "iad", "icn", "sin"} {
 		fmt.Printf("Backing up all EOS devices in %s\n", reg)
-		eosNDS := GetNetDevs([]string{reg}, []string{}, "eos")
+		eosNDS := getNetDevs([]string{reg}, []string{}, "eos")
 		backups, err = funcrunner.FuncRun(eosNDS, "backup")
 		if err != nil {
 			log.Fatalf("FuncRun Backup error: %s\n", err)
 		}
-		backupSlice = Unmarshal(backups, "backup")
+		backupSlice = unmarshal(backups, "backup")
 		bkups, ok = backupSlice.([]funcrunner.Backup)
 		if !ok {
 			log.Fatalf("Backup failed assertion\n")
 		}
 		for _, b := range bkups {
-			UpdateBackup(b)
+			updateBackup(b)
 		}
 	}
 }
 
-func GetNetDevs(include, exclude []string, opSys string) netdevs.Netdevs {
+func getNetDevs(include, exclude []string, opSys string) netdevs.Netdevs {
 	allnds, err := netdevs.NetdevsFromRedis("127.0.0.1:6379")
 	if err != nil {
 		log.Fatalf("failure loading netdevs from file %s: %s\n", ndsCache, err)
@@ -344,20 +337,7 @@ func init() {
 	i := strings.Split(include, ",")
 	e := strings.Split(exclude, ",")
 	o := opersys
-	nds = GetNetDevs(i, e, o)
-}
-
-func CompareInventory(last, current map[string]Inventory) {
-	for k, _ := range last {
-		if _, ok := current[k]; !ok {
-			log.Printf("%s missing in current inventory\n", k)
-		}
-	}
-	for k, _ := range current {
-		if _, ok := last[k]; !ok {
-			log.Printf("Adding %s to inventory\n", k)
-		}
-	}
+	nds = getNetDevs(i, e, o)
 }
 
 func timeString() string {
@@ -368,7 +348,7 @@ func timeString() string {
 	return s2
 }
 
-func SaveInventoryToRedis(key string, data []byte) {
+func saveInventoryToRedis(key string, data []byte) {
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "", // no password set
@@ -383,39 +363,39 @@ func SaveInventoryToRedis(key string, data []byte) {
 	}
 }
 
-func GetInventoryFromRedis(key string) map[string]Inventory {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
-	defer rdb.Close()
+// func getInventoryFromRedis(key string) map[string]Inventory {
+// 	rdb := redis.NewClient(&redis.Options{
+// 		Addr:     "localhost:6379",
+// 		Password: "", // no password set
+// 		DB:       0,  // use default DB
+// 	})
+// 	defer rdb.Close()
 
-	ctx := context.Background()
-	val, err := rdb.Get(ctx, "inventory").Result()
-	if err != nil {
-		log.Fatalf("Error retrieving inventory from redis: %s\n", err)
-	}
+// 	ctx := context.Background()
+// 	val, err := rdb.Get(ctx, "inventory").Result()
+// 	if err != nil {
+// 		log.Fatalf("Error retrieving inventory from redis: %s\n", err)
+// 	}
 
-	retInterface := Unmarshal([]byte(val), "inventory")
-	ret, ok := retInterface.(map[string]Inventory)
-	if !ok {
-		log.Fatalf("Error unmarshalling inventory from redis\n")
-	}
-	return ret
-}
+// 	retInterface := unmarshal([]byte(val), "inventory")
+// 	ret, ok := retInterface.(map[string]Inventory)
+// 	if !ok {
+// 		log.Fatalf("Error unmarshalling inventory from redis\n")
+// 	}
+// 	return ret
+// }
 
 func main() {
 	if allInventory {
 		//lastInventory := GetInventoryFromRedis("inventory")
-		currentInventory := GetAllInventory()
+		currentInventory := getAllInventory()
 		inventoryBytes := funcrunner.Marshal(currentInventory)
-		SaveInventoryToRedis("inventory_test", inventoryBytes)
-		//SaveInventoryToRedis("inventory_"+timeString(), inventoryBytes)
-		//CompareInventory(lastInventory, currentInventory)
+		saveInventoryToRedis("inventory_test", inventoryBytes)
+		//saveInventoryToRedis("inventory_"+timeString(), inventoryBytes)
+		//compareInventory(lastInventory, currentInventory)
 	}
 	if allBackup {
 		fmt.Println("Backing up devices")
-		BackupAll()
+		backupAll()
 	}
 }
