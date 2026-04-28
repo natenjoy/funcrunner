@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"flag"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/natenjoy/funcrunner/funcrunner"
 	"github.com/natenjoy/funcrunner/netdevs"
+	"github.com/redis/go-redis/v9"
 )
 
 func Unmarshal(bs []byte, stype string) any {
@@ -358,12 +360,49 @@ func CompareInventory(last, current map[string]Inventory) {
 	}
 }
 
-func TimeString() string {
+func timeString() string {
 	t := time.Now()
 	s := fmt.Sprintf("%s", t)
 	s1 := strings.Split(s, ".")[0]
 	s2 := strings.Replace(s1, " ", "_", -1)
 	return s2
+}
+
+func SaveInventoryToRedis(key string, data []byte) {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	defer rdb.Close()
+
+	ctx := context.Background()
+	err := rdb.Set(ctx, key, data, 0).Err()
+	if err != nil {
+		log.Fatalf("Error backing up inventory to redis: %s\n", err)
+	}
+}
+
+func GetInventoryFromRedis(key string) map[string]Inventory {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	defer rdb.Close()
+
+	ctx := context.Background()
+	val, err := rdb.Get(ctx, "inventory").Result()
+	if err != nil {
+		log.Fatalf("Error retrieving inventory from redis: %s\n", err)
+	}
+
+	retInterface := Unmarshal([]byte(val), "inventory")
+	ret, ok := retInterface.(map[string]Inventory)
+	if !ok {
+		log.Fatalf("Error unmarshalling inventory from redis\n")
+	}
+	return ret
 }
 
 func main() {
@@ -372,7 +411,7 @@ func main() {
 		currentInventory := GetAllInventory()
 		inventoryBytes := funcrunner.Marshal(currentInventory)
 		SaveInventoryToRedis("inventory_test", inventoryBytes)
-		//SaveInventoryToRedis("inventory_"+TimeString(), inventoryBytes)
+		//SaveInventoryToRedis("inventory_"+timeString(), inventoryBytes)
 		//CompareInventory(lastInventory, currentInventory)
 	}
 	if allBackup {
