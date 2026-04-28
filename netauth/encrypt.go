@@ -5,11 +5,9 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"fmt"
-	"io/ioutil"
+
 	"log"
-	mrand "math/rand"
 	"os"
-	"time"
 )
 
 // Encrypt takes plaindata and key and produces cipherbytes
@@ -37,9 +35,9 @@ func Encrypt(key, plaindata []byte) ([]byte, error) {
 // Decrypt takes cipherdata and returns plainbytes with key
 func Decrypt(key, cipherdata []byte) ([]byte, error) {
 	if len(cipherdata) < 12 {
-                e := fmt.Errorf("user encryption error. try removing ~/.creds.enc file")
-                return nil, e
-        }
+		e := fmt.Errorf("user encryption error. try removing ~/.creds.enc file")
+		return nil, e
+	}
 
 	blockCipher, err := aes.NewCipher(key)
 	if err != nil {
@@ -63,7 +61,7 @@ func Decrypt(key, cipherdata []byte) ([]byte, error) {
 
 // GetSymmetricKeyFromFile loads a key from file
 func GetSymmetricKeyFromFile(fname string) []byte {
-	key, err := ioutil.ReadFile(fname)
+	key, err := os.ReadFile(fname)
 	if err != nil {
 		e := fmt.Sprintf("Error obtaining key from file %s: %s", fname, err)
 		log.Fatalf(e)
@@ -77,7 +75,7 @@ func CreateNewSymmetricKeyFile(fname string, key []byte) error {
 		e := fmt.Errorf("Invalid key. Key length must be 32 bytes")
 		return e
 	}
-	err := ioutil.WriteFile(fname, key, os.FileMode(int(0777)))
+	err := os.WriteFile(fname, key, os.FileMode(int(0777)))
 	if err != nil {
 		e := fmt.Errorf("Could not save key to %s: %s", fname, err)
 		return e
@@ -93,7 +91,7 @@ func EncryptToFile(key, plainbytes []byte, fname string) error {
 		return e
 	}
 
-	err = ioutil.WriteFile(fname, cipherbytes, os.FileMode(int(0777)))
+	err = os.WriteFile(fname, cipherbytes, os.FileMode(int(0777)))
 	if err != nil {
 		e := fmt.Errorf("Error writing to file: %s", err)
 		return e
@@ -103,7 +101,7 @@ func EncryptToFile(key, plainbytes []byte, fname string) error {
 
 // DecryptFromFile decrypts fname with key and returns the file bytes
 func DecryptFromFile(key []byte, fname string) ([]byte, error) {
-	cipherbytes, err := ioutil.ReadFile(fname)
+	cipherbytes, err := os.ReadFile(fname)
 	if err != nil {
 		e := fmt.Errorf("Error opening file: %s", err)
 		return nil, e
@@ -120,7 +118,6 @@ func DecryptFromFile(key []byte, fname string) ([]byte, error) {
 // GenRandomKey generates and returns a random 32 byte key
 func GenRandomKey() []byte {
 	key := make([]byte, 32)
-	mrand.Seed(time.Now().UnixNano())
-	mrand.Read(key)
+	rand.Read(key)
 	return key
 }
