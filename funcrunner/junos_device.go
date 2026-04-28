@@ -1,7 +1,6 @@
 package funcrunner
 
 import (
-	_ "fmt"
 	"log"
 	"strconv"
 	"strings"
