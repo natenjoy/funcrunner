@@ -181,7 +181,6 @@ func getIFIndex(nds netdevs.Netdevs) []byte {
 
 func getAllInventory() map[string]Inventory {
 	m := map[string]Inventory{}
-
 	log.Println("Collecting APC Inventory")
 	apcNDS := getNetDevs([]string{}, []string{}, "apc")
 	log.Printf("Devices: %d\n", len(apcNDS))
@@ -219,7 +218,7 @@ func getAllInventory() map[string]Inventory {
 	maps.Copy(m, vpxInv)
 
 	for _, reg := range []string{"iad", "icn", "ams", "sin"} {
-		for _, az := range []string{"1", "2", "3", "4"} {
+		for _, az := range []string{"1", "2", "3"} {
 			loc := reg + az
 			log.Printf("Collecting EOS Inventory for %s\n", loc)
 			eosNDS := getNetDevs([]string{loc}, []string{}, "eos")
@@ -227,6 +226,11 @@ func getAllInventory() map[string]Inventory {
 			maps.Copy(m, eosInv)
 		}
 	}
+	loc := "icn4"
+	log.Printf("Collecting EOS Inventory for %s\n", loc)
+	eosNDS := getNetDevs([]string{loc}, []string{}, "eos")
+	eosInv := getInventory(eosNDS)
+	maps.Copy(m, eosInv)
 
 	return m
 }
