@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -388,6 +389,20 @@ func BulkSSHRequest(nds Netdevs, commands []string) []*SSHRequest {
 	for i := range srs {
 		wg.Add(1)
 		go func(i int) {
+
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("recovered from panic doing work on %s (ip %s): %+v\n", srs[i].Hostname, srs[i].IPAddress, r)
+					if len(srs[i].Commands) > 0 {
+						log.Printf("commands attempted (%d):", len(srs[i].Commands))
+						for _, command := range srs[i].Commands {
+							fmt.Printf(">    %s", command)
+						}
+					}
+					log.Println(string(debug.Stack()))
+				}
+			}()
+
 			defer wg.Done()
 			srs[i].Execute(commands)
 		}(i)
