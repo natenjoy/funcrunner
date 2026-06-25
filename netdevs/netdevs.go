@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -35,7 +36,7 @@ type Netdev struct {
 	SerialNumberSecondary string    `json:"serial_number_secondary" yaml:"serial_number_secondary"`
 	SSHPort               string    `json:"ssh_port" yaml:"ssh_port"`
 	Parent                string    `json:"parent,omitempty" yaml:"parent"`
-	LastSeen              time.Time `json:"last_seen,omitempty" yaml:"last_seen"`
+	LastSeen              time.Time `json:"last_seen" yaml:"last_seen"`
 }
 
 type Netdevs []Netdev
@@ -226,7 +227,6 @@ func (nds Netdevs) Dump() {
 	for _, nd := range nds {
 		fmt.Printf("%+v\n", nd)
 	}
-	return
 }
 
 func NetdevsToRedis(nds Netdevs, ipPort string) error {
@@ -353,7 +353,6 @@ func (s *SSHRequest) Execute(commands []string) {
 		}
 		s.Responses = append(s.Responses, response.Result)
 	}
-	return
 }
 
 // BulkSSHRequest takes netdevs and commands and returns a slice or *SSHRequest after execution
@@ -388,6 +387,20 @@ func BulkSSHRequest(nds Netdevs, commands []string) []*SSHRequest {
 	for i := range srs {
 		wg.Add(1)
 		go func(i int) {
+
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("recovered from panic doing work on %s (ip %s): %+v\n", srs[i].Hostname, srs[i].IPAddress, r)
+					if len(srs[i].Commands) > 0 {
+						log.Printf("commands attempted (%d):", len(srs[i].Commands))
+						for _, command := range srs[i].Commands {
+							fmt.Printf(">    %s", command)
+						}
+					}
+					log.Println(string(debug.Stack()))
+				}
+			}()
+
 			defer wg.Done()
 			srs[i].Execute(commands)
 		}(i)
